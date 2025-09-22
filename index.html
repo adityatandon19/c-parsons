@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>C Parsons Puzzles</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- jQuery + jQuery UI (required by js-parsons) -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <link  href="https://code.jquery.com/ui/1.13.3/themes/base/jquery-ui.css" rel="stylesheet">
+  <script src="https://code.jquery.com/ui/1.13.3/jquery-ui.min.js"></script>
+
+  <!-- js-parsons (local copies). Replace placeholder files in js/ and css/ with official ones. -->
+  <link  href="css/parsons.css" rel="stylesheet">
+  <script src="js/parsons_lib.js"></script>
+  <script src="js/parsons.js"></script>
+
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 18px; }
+    header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; }
+    #feedback { margin-top: 10px; min-height: 24px; }
+    .task-desc { margin: 10px 0 16px; font-weight: 600; }
+    .columns { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+    .sortable-code { min-height: 320px; }
+    .trash { background: #fafafa; }
+    @media (max-width: 900px) { .columns { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1 style="margin:0">C Parsons Puzzles</h1>
+  <div class="controls">
+    <label>
+      Puzzle:
+      <select id="puzzleSelect"></select>
+    </label>
+    <button id="new">New order</button>
+    <button id="reset">Reset</button>
+    <button id="grade">Check</button>
+    <label><input type="checkbox" id="requireDragging"> Require dragging</label>
+  </div>
+</header>
+
+<div id="desc" class="task-desc"></div>
+
+<div class="columns">
+  <div>
+    <h3>Blocks</h3>
+    <ul id="sortable" class="sortable-code"></ul>
+  </div>
+  <div>
+    <h3>Trash (distractors)</h3>
+    <ul id="trash" class="sortable-code trash"></ul>
+  </div>
+</div>
+
+<div id="feedback"></div>
+
+<script src="puzzles.js"></script>
+<script>
+  let parson = null;
+  let current = null;
+
+  function loadPuzzle(p) {
+    if (!window.ParsonsWidget) {
+      document.getElementById('feedback').innerHTML =
+        "⚠️ js-parsons library not found. Replace placeholder files in /js and /css with official ones.";
+      return;
+    }
+    $("#desc").text(p.description);
+    $("#feedback").empty();
+
+    parson = new ParsonsWidget({
+      sortableId: 'sortable',
+      trashId: 'trash',
+      max_wrong_lines: p.maxWrong ?? 2,
+      requireDragging: $("#requireDragging").prop("checked"),
+      can_indent: true,
+      feedback_cb: function(fb) { $("#feedback").html(fb.join("<br/>")); }
+    });
+
+    const allLines = (p.solution.join("\n") + "\n" + (p.distractors ?? []).join("\n"));
+    parson.init(allLines);
+    parson.shuffleLines();
+  }
+
+  const $sel = $("#puzzleSelect");
+  PUZZLES.forEach((p, i) => $sel.append(new Option(p.title, i)));
+  $sel.on("change", function() {
+    current = PUZZLES[Number(this.value)];
+    loadPuzzle(current);
+  });
+
+  $("#new").on("click", () => parson && parson.shuffleLines());
+  $("#reset").on("click", () => current && loadPuzzle(current));
+  $("#grade").on("click", () => {
+    if (!parson) return;
+    const fb = parson.getFeedback();
+    $("#feedback").html(fb.join("<br/>"));
+  });
+  $("#requireDragging").on("change", () => current && loadPuzzle(current));
+
+  current = PUZZLES[0];
+  $sel.val("0");
+  loadPuzzle(current);
+</script>
+</body>
+</html>
